@@ -1,0 +1,15 @@
+osmnx
+geopandas
+pandas
+numpy
+networkx
+shapely
+pulp
+plotly
+dash
+cenpy
+pyproj
+scipy
+sqlalchemy
+psycopg2-binary
+pandana
