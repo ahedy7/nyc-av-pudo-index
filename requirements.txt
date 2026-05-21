@@ -5,6 +5,7 @@ numpy
 networkx
 shapely
 pulp
+matplotlib
 plotly
 dash
 cenpy
