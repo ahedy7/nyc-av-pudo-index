@@ -1,5 +1,6 @@
 osmnx
 geopandas
+mapclassify
 pandas
 numpy
 networkx
