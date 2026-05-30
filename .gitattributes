@@ -1,0 +1,13 @@
+# Force LF line endings for all text files on all platforms
+* text=auto eol=lf
+
+# Notebooks: always LF, no CRLF normalisation surprises
+*.ipynb text eol=lf
+
+# Binary files: no line-ending conversion
+*.png binary
+*.jpg binary
+*.gpkg binary
+*.pkl binary
+*.parquet binary
+*.zip binary
