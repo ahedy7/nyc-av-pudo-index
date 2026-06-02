@@ -17,7 +17,7 @@
 
 ---
 
-Self-driving cars used to feel like a back-to-the-future novelty. With Waymo expanding city to city and Robotaxi and other competitors entering the market, autonomous vehicles are now asserting themselves as real transportation infrastructure. That shift creates a concrete, unglamorous problem: where do these vehicles actually stop?
+Self-driving cars used to feel like a back-to-the-future-esque novelty. With Waymo expanding city to city and Robotaxi and other competitors entering the market, autonomous vehicles (AVs) are now asserting themselves as real transportation infrastructure. That shift creates a concrete problem: where do these vehicles actually stop?
 
 Curb space is scarce. Uber, Lyft, Waymo, delivery trucks, and micromobility all want the curb at the same time. Designated PUDO zones reduce that chaos and improve safety and fleet efficiency. The constraint is sharpest for AVs specifically, because a human driver can double-park or block a hydrant for thirty seconds and react to a cop, while an AV needs a guaranteed, legal, predictable place to stop. The benefits apply to human-driven TNCs too (Hunter & Kockelman, 2023), but automation is what makes pre-designated curb space a hard requirement rather than a nice-to-have.
 
@@ -25,7 +25,7 @@ This project picks where those PUDO stations should go. Using 2010 NYC Yellow Ta
 
 ## What this is, and what it isn't
 
-This is a **siting tool**. It answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the planning input that comes *before* operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
+This answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the planning input that comes *before* operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
 
 ## Key results
 
@@ -39,13 +39,15 @@ This is a **siting tool**. It answers which blocks should host PUDOs and where, 
 | 125       | 99.2%          |
 | 150       | 99.6%          |
 
-The curve shows sharp diminishing returns past ~100 sites, which is the practical fleet-size signal: roughly 100 stations cover 95% of Manhattan demand, and everything beyond that buys very little.
+The curve shows diminishing returns past ~100 sites, which is the practical fleet-size signal: roughly 100 stations cover 95% of Manhattan demand, and everything beyond that buys very little.
 
 ![Manhattan coverage curve](data/outputs/coverage_curve.png)
 
 **Equity-weighted optimization.** Reweighting demand toward low-income, low-vehicle-ownership tracts shifts coverage measurably toward neighborhoods like the West Village, Greenwich Village, East Harlem, and the Lower East Side, and away from Central Park, Stuyvesant Town, and the Upper East Side. The neighborhood-level comparison quantifies exactly which areas gain and lose coverage under an equity constraint.
 
-![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison.png)
+![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison_p50.png)
+
+![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison_p100.png)
 
 **Generalization (Porto, Portugal).** The same pipeline, pointed at 1.7M Porto taxi trajectories with nothing changed but a config object, produces a clean coverage curve and a sensible, organically distributed site set. Porto's irregular medieval street layout spreads sites naturally, in contrast to the grid-aligned pattern Manhattan produces.
 
@@ -77,7 +79,7 @@ This methodology builds on peer-reviewed research rather than being invented fro
 
 ## Limitations
 
-These are real, and naming them is part of the work. Each reflects the gap between a model and a deployment.
+Each reflects the gap between a model and a deployment.
 
 **The model optimizes coverage, not place or curb capacity.** The MCLP will place two sites close together on the same avenue if each covers distinct demand, but a real PUDO needs physical curb space (roughly a small loading zone's footprint), and no planner would site them that close on one corridor. The model also treats a station handling 50 pickups an hour identically to one handling 500, because it optimizes coverage rather than throughput. A deployment-ready version would need curb-capacity and minimum-separation constraints layered on top.
 
