@@ -12,7 +12,6 @@
 
 
 
-# NYC AV PUDO Index
 
 **Optimizing autonomous-vehicle pick-up and drop-off (PUDO) station siting in NYC, with a reproducible pipeline that generalizes to any city with taxi or ride-share data.**
 
