@@ -68,7 +68,7 @@ The framework follows the MCLP-on-a-road-network approach from Wang et al. (2025
 
 **Stage 4 — MCLP optimization.** The Maximal Coverage Location Problem selects p sites to maximize NKDE-weighted demand covered within 500m network distance, where a demand point counts as covered if at least one selected site is within range (no double-credit for overlapping coverage). The coverage matrix is precomputed with a Euclidean pre-filter followed by pandana network-distance queries, and the problem is solved with PuLP and the CBC solver. Run across p = 50, 75, 100, 125, 150 to produce the coverage curve.
 
-**Stage 5 — Equity-weighted optimization.** Demand is reweighted using two ACS variables for Manhattan (county FIPS 061), vintage 2006–2010 to match the demand data: B19013 (median household income) and B08201 (vehicle availability). Tracts with lower income and higher zero-vehicle-household rates receive a higher equity weight, which inflates their demand in the objective and pulls sites toward them. The same MCLP is solved on the reweighted demand, and the base and equity selections are compared at the neighborhood (NTA) level.
+**Stage 5 — Equity-weighted optimization.** Demand is reweighted using two ACS variables for Manhattan (county FIPS 061), vintage 2006–2010 to match the demand data: B19013 (median household income) and B08201 (vehicle availability). Tracts with lower income and higher zero-vehicle-household rates receive a higher equity weight, which inflates their demand in the objective and pulls sites toward them. The same MCLP is solved on the reweighted demand, and the base and equity selections are compared at the neighborhood (NTA) level. This operationalizes the concept of transport-related social exclusion (Lucas, 2012): the idea that disadvantage is not simply low income but reduced mobility that locks people out of accessing jobs, healthcare, education, and social networks. Car access is one of the cleanest proxies for that lock-out risk, which is why the zero-vehicle-household rate carries equal weight to income here rather than treating income alone as the signal.
 
 **Stage 6 — Generalization.** The base pipeline is refactored into a single config-driven notebook that runs on any city given only latitude and longitude demand points. The projected CRS is auto-derived from the data (UTM zone computed from longitude), and the street network is pulled automatically from OpenStreetMap. Validated on Porto, Portugal, run at p = 20, 40, 55, 70, 85, 100.
 
@@ -91,6 +91,10 @@ Each reflects the gap between a model and a deployment.
 **The demand signal is a revealed-preference proxy, and it's old.** 2010 TLC data is the most recent NYC ride data with true coordinates (TLC removed them from all post-July-2016 data), but it reflects where people took yellow cabs in 2010, not where they'll want AV service. Demand is also endogenous: once PUDOs exist they change where people want rides, so siting on current demand is informative but circular. Modeling that properly requires agent-based demand simulation, which is out of scope here.
 
 **Static curb constraints, not real-time occupancy.** The model filters against fixed features like hydrants, bus stops, and bike lanes, but it cannot see dynamic peak-hour curb competition, because that data is not publicly available at the block level for NYC. The siting reflects static curb availability, not the rush-hour fight for space.
+
+**Equity limitation.** The equity weighting rests on two variables, income and vehicle access, but transport-related social exclusion is multidimensional and relational (Lucas, 2012), shaped by age, disability, time poverty, and physical access that two census variables cannot fully capture. Car access is a strong but partial proxy. A fuller treatment would incorporate additional dimensions of mobility disadvantage.
+
+
 
 ## Tech stack
 
