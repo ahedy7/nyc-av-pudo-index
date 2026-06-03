@@ -10,3 +10,6 @@ __pycache__/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 
+!docs/data/
+!docs/data/**
+

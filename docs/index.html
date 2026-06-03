@@ -1,0 +1,663 @@
+<!--
+  NYC AV PUDO Index — Interactive Dashboard
+  ==========================================
+  Run locally:
+    cd dashboard && python -m http.server 8080
+    Then open http://localhost:8080 in your browser.
+
+  Deploys as-is to GitHub Pages — no build step required.
+  The data/ folder must be co-located with this file.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYC AV PUDO Index</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #06070f;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    #deck-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Glassmorphic control panel ── */
+    #panel {
+      position: absolute;
+      top: 20px; left: 20px;
+      width: 268px;
+      padding: 22px 20px 20px;
+      background: rgba(8, 10, 20, 0.86);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      color: #dde3f0;
+      z-index: 10;
+      box-shadow:
+        0 4px 6px rgba(0,0,0,0.25),
+        0 20px 48px rgba(0,0,0,0.55),
+        inset 0 1px 0 rgba(255,255,255,0.055);
+      user-select: none;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f0f4ff;
+      letter-spacing: -0.35px;
+      margin-bottom: 3px;
+    }
+
+    .panel-sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.28);
+      letter-spacing: 0.1px;
+      margin-bottom: 22px;
+      line-height: 1.4;
+    }
+
+    .ctl-label {
+      font-size: 9.5px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.95px;
+      color: rgba(255,255,255,0.27);
+      margin-bottom: 8px;
+    }
+
+    .ctl-group { margin-bottom: 17px; }
+
+    /* Pill toggles */
+    .pill-row {
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.038);
+      border-radius: 9px;
+      padding: 3px;
+    }
+
+    .pill {
+      flex: 1;
+      padding: 7px 0;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: rgba(255,255,255,0.35);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .pill:hover { color: rgba(255,255,255,0.62); }
+
+    .pill.on {
+      background: rgba(99, 179, 237, 0.15);
+      color: #93c5fd;
+      box-shadow: 0 0 0 1px rgba(99, 179, 237, 0.22);
+    }
+
+    #mode-ctl.hide { display: none; }
+
+    /* Slider */
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .p-big {
+      font-size: 22px;
+      font-weight: 600;
+      color: #93c5fd;
+      letter-spacing: -0.8px;
+      line-height: 1;
+    }
+
+    .p-unit {
+      font-size: 10px;
+      color: rgba(255,255,255,0.27);
+      margin-left: 2px;
+    }
+
+    .slider-wrap { margin-top: 10px; }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.1);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: #93c5fd;
+      border: 2.5px solid rgba(255,255,255,0.22);
+      box-shadow: 0 0 10px rgba(99,179,237,0.55);
+      cursor: grab;
+      transition: transform 0.1s;
+    }
+
+    input[type=range]:active::-webkit-slider-thumb {
+      cursor: grabbing;
+      transform: scale(1.25);
+    }
+
+    .sep {
+      height: 1px;
+      background: rgba(255,255,255,0.055);
+      margin: 18px 0 16px;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.028);
+      border-radius: 9px;
+      padding: 9px 11px;
+      border: 1px solid rgba(255,255,255,0.045);
+    }
+
+    .stat-card.full { grid-column: 1 / -1; }
+
+    .stat-k {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: rgba(255,255,255,0.24);
+      margin-bottom: 4px;
+    }
+
+    .stat-v {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: -0.1px;
+    }
+
+    .stat-v.hero {
+      font-size: 28px;
+      font-weight: 600;
+      color: #93c5fd;
+      letter-spacing: -1.2px;
+      line-height: 1;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      bottom: 20px; left: 20px;
+      padding: 12px 15px;
+      background: rgba(8,10,20,0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 11px;
+      z-index: 10;
+    }
+
+    .leg-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.85px;
+      color: rgba(255,255,255,0.26);
+      margin-bottom: 7px;
+    }
+
+    .leg-bar {
+      width: 150px; height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #12053c, #2636a0, #009898, #ff7200, #ffe018);
+      margin-bottom: 5px;
+    }
+
+    .leg-ends {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: rgba(255,255,255,0.26);
+    }
+
+    /* Attribution */
+    #attr {
+      position: absolute;
+      bottom: 8px; right: 10px;
+      font-size: 9px;
+      color: rgba(255,255,255,0.17);
+      z-index: 10;
+    }
+
+    #attr a {
+      color: rgba(255,255,255,0.28);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    #attr a:hover { color: rgba(255,255,255,0.55); }
+  </style>
+</head>
+<body>
+
+<canvas id="deck-canvas"></canvas>
+
+<!-- Control panel -->
+<div id="panel">
+  <div class="panel-title">NYC AV PUDO Index</div>
+  <div class="panel-sub">Optimal pick-up / drop-off station siting</div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">City</div>
+    <div class="pill-row">
+      <button class="pill on" id="pill-manhattan" onclick="setCity('manhattan')">Manhattan</button>
+      <button class="pill"    id="pill-porto"     onclick="setCity('porto')">Porto</button>
+    </div>
+  </div>
+
+  <div class="ctl-group" id="mode-ctl">
+    <div class="ctl-label">Optimization</div>
+    <div class="pill-row">
+      <button class="pill on" id="pill-base"   onclick="setMode('base')">Base</button>
+      <button class="pill"    id="pill-equity" onclick="setMode('equity')">Equity</button>
+    </div>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">
+      <div class="slider-header">
+        <span>Sites (p)</span>
+        <span><span class="p-big" id="p-display">100</span><span class="p-unit">sites</span></span>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" id="p-slider" min="0" max="4" step="1" value="2">
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card full">
+      <div class="stat-k">Selected sites</div>
+      <div class="stat-v hero" id="stat-n">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-k">City</div>
+      <div class="stat-v" id="stat-city">Manhattan</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-k">Mode</div>
+      <div class="stat-v" id="stat-mode">Base</div>
+    </div>
+  </div>
+</div>
+
+<div id="legend">
+  <div class="leg-title">Demand intensity (NKDE)</div>
+  <div class="leg-bar"></div>
+  <div class="leg-ends"><span>Low</span><span>High</span></div>
+</div>
+
+<div id="attr">
+  &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>
+  &nbsp;·&nbsp; deck.gl
+</div>
+
+<script>
+/* ================================================================
+   Config
+   ================================================================ */
+const MANHATTAN_P = [50, 75, 100, 125, 150];
+const PORTO_P     = [20, 40,  55,  70,  85, 100];
+
+const CAMERA = {
+  manhattan: { longitude: -73.975, latitude: 40.775, zoom: 11.5, pitch: 0, bearing: 0 },
+  porto:     { longitude: -8.614,  latitude: 41.158, zoom: 11.5, pitch: 0, bearing: 0 },
+};
+
+/* ================================================================
+   State
+   ================================================================ */
+let state     = { city: 'manhattan', mode: 'base', p: 100 };
+let statsJson = {};
+let cache     = {};
+let deckInst  = null;
+
+/* ================================================================
+   Color ramp: dark indigo → blue → cyan/teal → amber → gold
+   ================================================================ */
+const RAMP = [
+  [18,   5,  60, 255],
+  [36,  50, 160, 255],
+  [ 0, 152, 148, 255],
+  [255, 114,   0, 255],
+  [255, 210,  20, 255],
+];
+
+function rampColor(t, alpha) {
+  t = Math.max(0, Math.min(1, t || 0));
+  const n = RAMP.length - 1;
+  const i = Math.min(Math.floor(t * n), n - 1);
+  const f = t * n - i;
+  const lo = RAMP[i], hi = RAMP[i + 1];
+  return [
+    (lo[0] + (hi[0] - lo[0]) * f) | 0,
+    (lo[1] + (hi[1] - lo[1]) * f) | 0,
+    (lo[2] + (hi[2] - lo[2]) * f) | 0,
+    alpha ?? 255,
+  ];
+}
+
+/* ================================================================
+   Data helpers
+   ================================================================ */
+function currentKey() {
+  if (state.city === 'porto') return `porto_base_p${state.p}`;
+  return `manhattan_${state.mode}_p${state.p}`;
+}
+
+function pVals() {
+  return state.city === 'manhattan' ? MANHATTAN_P : PORTO_P;
+}
+
+async function fetchGeoJSON(key) {
+  if (cache[key]) return cache[key];
+  const r = await fetch(`data/${key}.geojson`);
+  if (!r.ok) throw new Error(`HTTP ${r.status} loading ${key}`);
+  const gj = await r.json();
+  cache[key] = gj;
+  return gj;
+}
+
+/* ================================================================
+   Layer builders
+   ================================================================ */
+const {
+  Deck,
+  GeoJsonLayer,
+  ScatterplotLayer,
+  TileLayer,
+  BitmapLayer,
+  FlyToInterpolator,
+} = deck;
+
+function basemapLayer() {
+  return new deck.TileLayer({
+    id: 'carto-basemap',
+    data: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+    minZoom: 0,
+    maxZoom: 19,
+    tileSize: 256,
+    renderSubLayers: props => {
+      const { boundingBox } = props.tile;
+      return new deck.BitmapLayer(props, {
+        data: null,
+        image: props.data,
+        bounds: [boundingBox[0][0], boundingBox[0][1], boundingBox[1][0], boundingBox[1][1]],
+      });
+    },
+  });
+}
+
+function networkLayer(gj) {
+  return new GeoJsonLayer({
+    id: 'network',
+    data: gj,
+    pickable: false,
+    filled: false,
+    stroked: true,
+    lineWidthMinPixels: 1,
+    lineWidthMaxPixels: 2.5,
+    getLineColor: f => rampColor(f.properties.nkde_score, 52),
+    getLineWidth: 3,
+  });
+}
+
+function coverageLayer(gj) {
+  // 500 m coverage rings — the key visual showing optimization logic
+  return new ScatterplotLayer({
+    id: 'coverage',
+    data: gj.features,
+    pickable: false,
+    stroked: true,
+    filled: true,
+    radiusUnits: 'meters',
+    getPosition: f => f.geometry.coordinates,
+    getRadius: 500,
+    getFillColor: [55, 110, 255, 10],
+    getLineColor: [80, 145, 255, 48],
+    lineWidthMinPixels: 0.7,
+  });
+}
+
+function siteHaloLayer(gj) {
+  // Soft outer glow
+  return new ScatterplotLayer({
+    id: 'site-halo',
+    data: gj.features,
+    pickable: false,
+    stroked: false,
+    filled: true,
+    radiusUnits: 'meters',
+    getPosition: f => f.geometry.coordinates,
+    getRadius: 110,
+    getFillColor: f => rampColor(f.properties.nkde_score, 38),
+    parameters: { depthTest: false },
+  });
+}
+
+function siteLayer(gj) {
+  // Bright inner core
+  return new ScatterplotLayer({
+    id: 'sites',
+    data: gj.features,
+    pickable: true,
+    stroked: true,
+    filled: true,
+    radiusUnits: 'meters',
+    getPosition: f => f.geometry.coordinates,
+    getRadius: 44,
+    getFillColor: f => rampColor(f.properties.nkde_score, 230),
+    getLineColor: [255, 255, 255, 75],
+    lineWidthMinPixels: 0.7,
+    parameters: { depthTest: false },
+  });
+}
+
+/* ================================================================
+   Render
+   ================================================================ */
+function buildLayers() {
+  const netGJ  = (state.city === 'manhattan') ? (cache['manhattan_network'] || null) : null;
+  const siteGJ = cache[currentKey()] || null;
+
+  const layers = [basemapLayer()];
+  if (netGJ)  layers.push(networkLayer(netGJ));
+  if (siteGJ) {
+    layers.push(coverageLayer(siteGJ));
+    layers.push(siteHaloLayer(siteGJ));
+    layers.push(siteLayer(siteGJ));
+  }
+  return layers;
+}
+
+function redraw() {
+  deckInst.setProps({ layers: buildLayers() });
+}
+
+/* ================================================================
+   Stats readout
+   ================================================================ */
+function updateStats() {
+  const k = currentKey();
+  document.getElementById('stat-n').textContent    = statsJson[k] ?? '—';
+  document.getElementById('stat-city').textContent = state.city === 'porto' ? 'Porto' : 'Manhattan';
+  document.getElementById('stat-mode').textContent =
+    (state.city === 'porto' || state.mode === 'base') ? 'Base' : 'Equity';
+}
+
+/* ================================================================
+   Load + render cycle
+   ================================================================ */
+function loadAndRender() {
+  updateStats();
+  redraw();  // show immediately with whatever is cached
+
+  const key = currentKey();
+  if (!cache[key]) {
+    fetchGeoJSON(key)
+      .then(() => { redraw(); updateStats(); })
+      .catch(err => console.error('Failed to load', key, err));
+  }
+}
+
+/* ================================================================
+   Camera
+   ================================================================ */
+function flyTo(city) {
+  deckInst.setProps({
+    initialViewState: {
+      ...CAMERA[city],
+      transitionDuration: 1400,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+    },
+  });
+}
+
+/* ================================================================
+   UI event handlers
+   ================================================================ */
+function setCity(city) {
+  if (state.city === city) return;
+  state.city = city;
+
+  document.getElementById('pill-manhattan').classList.toggle('on', city === 'manhattan');
+  document.getElementById('pill-porto').classList.toggle('on', city === 'porto');
+  document.getElementById('mode-ctl').classList.toggle('hide', city === 'porto');
+
+  // Reset slider to midpoint of new city's p-values
+  const vals = pVals();
+  const slider = document.getElementById('p-slider');
+  slider.max   = vals.length - 1;
+  const midIdx = Math.floor(vals.length / 2);
+  slider.value = midIdx;
+  state.p      = vals[midIdx];
+  document.getElementById('p-display').textContent = state.p;
+
+  flyTo(city);
+  loadAndRender();
+}
+
+function setMode(mode) {
+  if (state.mode === mode) return;
+  state.mode = mode;
+  document.getElementById('pill-base').classList.toggle('on',   mode === 'base');
+  document.getElementById('pill-equity').classList.toggle('on', mode === 'equity');
+  loadAndRender();
+}
+
+document.getElementById('p-slider').addEventListener('input', function () {
+  state.p = pVals()[+this.value];
+  document.getElementById('p-display').textContent = state.p;
+  loadAndRender();
+});
+
+/* ================================================================
+   Tooltip
+   ================================================================ */
+function getTooltip({ object }) {
+  if (!object?.properties) return null;
+  const s = object.properties.nkde_score;
+  return {
+    html: `
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.7px;
+                  color:rgba(255,255,255,0.32);margin-bottom:6px">PUDO Site</div>
+      <div style="font-size:14px;font-weight:600;color:#93c5fd;letter-spacing:-0.3px">
+        ${s != null ? s.toFixed(5) : '—'}
+      </div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.28);margin-top:3px">
+        NKDE demand score
+      </div>`,
+    style: {
+      background: 'rgba(7,9,20,0.94)',
+      border: '1px solid rgba(99,179,237,0.25)',
+      borderRadius: '9px',
+      padding: '11px 14px',
+      fontFamily: "'Inter',system-ui,sans-serif",
+      color: '#dde3f0',
+      pointerEvents: 'none',
+      fontSize: '12px',
+      lineHeight: '1.4',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+    },
+  };
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+async function init() {
+  // Stats first so the readout is accurate on first paint
+  try {
+    const r = await fetch('data/stats.json');
+    statsJson = await r.json();
+  } catch (e) {
+    console.warn('stats.json unavailable:', e);
+  }
+
+  // Configure slider for initial state (Manhattan, p=100)
+  const slider   = document.getElementById('p-slider');
+  slider.max     = MANHATTAN_P.length - 1;
+  slider.value   = MANHATTAN_P.indexOf(100);
+
+  // Create deck.gl instance
+  deckInst = new Deck({
+    canvas: 'deck-canvas',
+    width: '100%',
+    height: '100%',
+    initialViewState: { ...CAMERA.manhattan },
+    controller: true,
+    useDevicePixels: true,
+    layers: [basemapLayer()],
+    getTooltip,
+  });
+
+  // Load network glow + initial site file in parallel — render after each arrives
+  Promise.all([
+    fetchGeoJSON('manhattan_network').catch(e => console.warn('network layer skipped:', e)),
+    fetchGeoJSON(currentKey()).catch(e => console.error('initial site load failed:', e)),
+  ]).then(() => { redraw(); updateStats(); });
+
+  updateStats();
+}
+
+init();
+</script>
+</body>
+</html>

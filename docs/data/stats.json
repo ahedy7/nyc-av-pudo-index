@@ -1,0 +1,19 @@
+{
+  "manhattan_base_p50": 50,
+  "manhattan_base_p75": 75,
+  "manhattan_base_p100": 100,
+  "manhattan_base_p125": 125,
+  "manhattan_base_p150": 150,
+  "manhattan_equity_p50": 50,
+  "manhattan_equity_p75": 75,
+  "manhattan_equity_p100": 100,
+  "manhattan_equity_p125": 125,
+  "manhattan_equity_p150": 150,
+  "porto_base_p20": 20,
+  "porto_base_p40": 40,
+  "porto_base_p55": 55,
+  "porto_base_p70": 70,
+  "porto_base_p85": 85,
+  "porto_base_p100": 100,
+  "manhattan_network": 9916
+}
