@@ -11,28 +11,15 @@ Toggle between Manhattan and Porto, switch base vs equity optimization, and slid
 
 ---
 
-GitHub's notebook renderer is currently broken for these files. Click a badge below to view each notebook on nbviewer.
-
-| Notebook | View |
-|----------|------|
-| 01 — Data Collection | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/01_data_collection.ipynb) |
-| 02 — NKDE | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/02_nkde.ipynb) |
-| 03 — Candidates | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/03_candidates.ipynb) |
-| 04 — Optimization | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/04_optimization.ipynb) |
-| 05 — Equity | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/05_equity.ipynb) |
-| 06 — Generalize | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/06_generalize.ipynb) |
-
----
-
 Self-driving cars used to feel like a back-to-the-future-esque novelty. With Waymo expanding city to city and Robotaxi and other competitors entering the market, autonomous vehicles (AVs) are now asserting themselves as real transportation infrastructure. That shift creates a concrete problem: where do these vehicles actually stop?
 
 Curb space is scarce. Uber, Lyft, Waymo, delivery trucks, and micromobility all want the curb at the same time. Designated PUDO zones reduce that chaos and improve safety and fleet efficiency. The constraint is sharpest for AVs specifically, because a human driver can double-park or block a hydrant for thirty seconds and react to a cop, while an AV needs a guaranteed, legal, predictable place to stop. The benefits apply to human-driven TNCs too (Hunter & Kockelman, 2023), but automation is what makes pre-designated curb space a hard requirement rather than a nice-to-have.
 
-This project picks where those PUDO stations should go. Using 2010 NYC Yellow Taxi data (the most recent publicly available NYC ride data with true latitude and longitude coordinates), road geometry from OpenStreetMap, and curb constraint layers from the NYC Open Data portal, it builds a demand surface along the road network and solves a Maximal Coverage Location Problem (MCLP) to select the set of stations that covers the most demand within walking distance. It then runs an equity-weighted variant that reweights demand toward transit-dependent, lower-income neighborhoods and measures the coverage cost of that tradeoff. Finally, the base pipeline is refactored into a config-driven notebook that runs on any city, validated on Porto, Portugal.
+This project picks where those PUDO stations should go. Using 2010 NYC Yellow Taxi data (the most recent publicly available NYC ride data with true latitude and longitude coordinates), road geometry from OpenStreetMap, and curb constraint layers from the NYC Open Data portal, it builds a demand surface along the road network and solves a Maximal Coverage Location Problem (MCLP) to select the set of stations that covers the most demand within walking distance. It then runs an equity-weighted variant that reweights demand toward transit-dependent, lower-income neighborhoods and measures the coverage cost of that tradeoff. Finally, the base pipeline is turned into a config-driven notebook that runs on any city, validated on Porto, Portugal.
 
 ## What this is, and what it isn't
 
-This answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the planning input that comes before operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
+This answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the analysis that comes before operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
 
 ## Key results
 
@@ -107,7 +94,7 @@ Each reflects the gap between a model and a deployment.
 
 ## Tech stack
 
-Python, GeoPandas, osmnx, NetworkX, pandana (network-distance queries), PuLP with the CBC solver (integer programming), Shapely, the Census API for ACS data, and PostGIS for the road network. ArcGIS Pro was used for cartographic QA only, not as part of the analytical pipeline. Visualization in matplotlib, with an interactive deck.gl dashboard (linked above) deployed as a static site on GitHub Pages.
+Python, GeoPandas, osmnx, NetworkX, pandana (network-distance queries), PuLP with the CBC solver (integer programming), Shapely, the Census API for ACS data, PostGIS for the road network, and ArcGIS Pro for cartographic QA. Visualization in matplotlib, with an interactive deck.gl dashboard (linked above) deployed as a static site on GitHub Pages.
 
 ## Repo structure
 
