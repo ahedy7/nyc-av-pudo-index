@@ -6,7 +6,9 @@
 
 Toggle between Manhattan and Porto, switch base vs equity optimization, and slide the number of stations to watch coverage update in real time.
 
-(<img width="1282" height="941" alt="image" src="https://github.com/user-attachments/assets/f94fc152-3365-47e4-8bfa-b150b137271e" />)
+<img width="1916" height="936" alt="image" src="https://github.com/user-attachments/assets/615e70a0-0fec-4512-b805-e1262dc55a72" />
+<img width="1915" height="945" alt="image" src="https://github.com/user-attachments/assets/6caf3100-17d0-45c3-9333-0ca99051747d" />
+
 
 ---
 
