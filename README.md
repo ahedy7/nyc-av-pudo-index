@@ -52,18 +52,18 @@ The curve shows diminishing returns past ~100 sites, which is the practical flee
 
 **Equity-weighted optimization.** Reweighting demand toward low-income, low-vehicle-ownership tracts shifts coverage measurably toward neighborhoods like the West Village, Greenwich Village, East Harlem, and the Lower East Side, and away from Central Park, Stuyvesant Town, and the Upper East Side. The neighborhood-level comparison quantifies exactly which areas gain and lose coverage under an equity constraint.
 
-![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison.png)
+![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison_p50.png)
 
 **Generalization (Porto, Portugal).** The same pipeline, pointed at 1.7M Porto taxi trajectories with nothing changed but a config object, produces a clean coverage curve and a sensible, organically distributed site set. Porto's irregular medieval street layout spreads sites naturally, in contrast to the grid-aligned pattern Manhattan produces. The right station count scales with coverage area, not population: Porto municipality is roughly 70% of Manhattan's footprint, and its coverage-curve knee sits accordingly around 70 sites.
 
 | Sites (p) | Demand covered |
 |-----------|----------------|
-| 20        | <!-- fill from porto_coverage_curve.png --> |
-| 40        | <!-- fill --> |
-| 55        | <!-- fill --> |
-| 70        | <!-- fill --> |
-| 85        | <!-- fill --> |
-| 100       | <!-- fill --> |
+| 20        | 43.0%         |
+| 40        | 68.7%         |
+| 55        | 81.6%         |
+| 70        | 90.7%         |
+| 85        | 95.0%         |
+| 100       | 98.0%         |
 
 ![Porto coverage curve](data/outputs/porto_coverage_curve.png)
 
