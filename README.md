@@ -1,19 +1,25 @@
 # NYC AV PUDO Index
 
-> GitHub's notebook renderer is currently broken for these files. Click a badge below to view each notebook on nbviewer.
+**Optimizing autonomous-vehicle pick-up and drop-off (PUDO) station siting in NYC, with a reproducible pipeline that generalizes to any city with taxi or ride-share data.**
+
+### 🔴 [Live interactive dashboard →](https://ahedy7.github.io/nyc-av-pudo-index/)
+
+Toggle between Manhattan and Porto, switch base vs equity optimization, and slide the number of stations to watch coverage update in real time.
+
+![Dashboard preview](docs/dashboard_preview.png)
+
+---
+
+GitHub's notebook renderer is currently broken for these files. Click a badge below to view each notebook on nbviewer.
 
 | Notebook | View |
-|---|---|
-| 01 — Data Collection | [![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/01_data_collection.ipynb) |
-| 02 — NKDE | [![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/02_nkde.ipynb) |
-| 03 — Candidates | [![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/03_candidates.ipynb) |
-| 04 — Optimization | [![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/04_optimization.ipynb) |
-| 05 — Equity | [![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/05_equity.ipynb) |
-
-
-
-
-**Optimizing autonomous-vehicle pick-up and drop-off (PUDO) station siting in NYC, with a reproducible pipeline that generalizes to any city with taxi or ride-share data.**
+|----------|------|
+| 01 — Data Collection | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/01_data_collection.ipynb) |
+| 02 — NKDE | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/02_nkde.ipynb) |
+| 03 — Candidates | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/03_candidates.ipynb) |
+| 04 — Optimization | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/04_optimization.ipynb) |
+| 05 — Equity | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/05_equity.ipynb) |
+| 06 — Generalize | [nbviewer](https://nbviewer.org/github/ahedy7/nyc-av-pudo-index/blob/master/notebooks/06_generalize.ipynb) |
 
 ---
 
@@ -25,7 +31,7 @@ This project picks where those PUDO stations should go. Using 2010 NYC Yellow Ta
 
 ## What this is, and what it isn't
 
-This answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the planning input that comes *before* operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
+This answers which blocks should host PUDOs and where, given real demand, curb constraints, and road geometry. It is the planning input that comes before operational simulation (like POLARIS) or fleet dispatch modeling, not a replacement for them. It does not simulate vehicle routing, rider matching, or real-time fleet behavior. The output is the analytical starting point a planner or operator refines, not a finished deployment map.
 
 ## Key results
 
@@ -45,11 +51,20 @@ The curve shows diminishing returns past ~100 sites, which is the practical flee
 
 **Equity-weighted optimization.** Reweighting demand toward low-income, low-vehicle-ownership tracts shifts coverage measurably toward neighborhoods like the West Village, Greenwich Village, East Harlem, and the Lower East Side, and away from Central Park, Stuyvesant Town, and the Upper East Side. The neighborhood-level comparison quantifies exactly which areas gain and lose coverage under an equity constraint.
 
-![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison_p50.png)
+![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison.png)
 
-![Equity coverage shift by neighborhood](data/outputs/equity_nta_comparison_p100.png)
+**Generalization (Porto, Portugal).** The same pipeline, pointed at 1.7M Porto taxi trajectories with nothing changed but a config object, produces a clean coverage curve and a sensible, organically distributed site set. Porto's irregular medieval street layout spreads sites naturally, in contrast to the grid-aligned pattern Manhattan produces. The right station count scales with coverage area, not population: Porto municipality is roughly 70% of Manhattan's footprint, and its coverage-curve knee sits accordingly around 70 sites.
 
-**Generalization (Porto, Portugal).** The same pipeline, pointed at 1.7M Porto taxi trajectories with nothing changed but a config object, produces a clean coverage curve and a sensible, organically distributed site set. Porto's irregular medieval street layout spreads sites naturally, in contrast to the grid-aligned pattern Manhattan produces.
+| Sites (p) | Demand covered |
+|-----------|----------------|
+| 20        | <!-- fill from porto_coverage_curve.png --> |
+| 40        | <!-- fill --> |
+| 55        | <!-- fill --> |
+| 70        | <!-- fill --> |
+| 85        | <!-- fill --> |
+| 100       | <!-- fill --> |
+
+![Porto coverage curve](data/outputs/porto_coverage_curve.png)
 
 ![Porto selected sites](data/outputs/porto_sites_p100.png)
 
@@ -63,11 +78,11 @@ The framework follows the MCLP-on-a-road-network approach from Wang et al. (2025
 
 **Stage 3 — Candidate generation and constraint filtering.** Candidate PUDO sites are interpolated every 400m along eligible road edges, excluding highway types unsuitable for curb stops (motorway, trunk, raceway, service, and their links). This yields 13,055 candidates. Each candidate is then filtered against the curb constraint layers, removed if within 15m of a bus stop, 10m of a hydrant, 5m of a bike lane, or 10m of a loading or no-standing zone, leaving 7,644 valid sites.
 
-**Stage 4 — MCLP optimization.** The Maximal Coverage Location Problem selects *p* sites to maximize NKDE-weighted demand covered within 500m network distance, where a demand point counts as covered if at least one selected site is within range (no double-credit for overlapping coverage). The coverage matrix is precomputed with a Euclidean pre-filter followed by pandana network-distance queries, and the problem is solved with PuLP and the CBC solver. Run across p = 50, 75, 100, 125, 150 to produce the coverage curve.
+**Stage 4 — MCLP optimization.** The Maximal Coverage Location Problem selects p sites to maximize NKDE-weighted demand covered within 500m network distance, where a demand point counts as covered if at least one selected site is within range (no double-credit for overlapping coverage). The coverage matrix is precomputed with a Euclidean pre-filter followed by pandana network-distance queries, and the problem is solved with PuLP and the CBC solver. Run across p = 50, 75, 100, 125, 150 to produce the coverage curve.
 
 **Stage 5 — Equity-weighted optimization.** Demand is reweighted using two ACS variables for Manhattan (county FIPS 061), vintage 2006–2010 to match the demand data: B19013 (median household income) and B08201 (vehicle availability). Tracts with lower income and higher zero-vehicle-household rates receive a higher equity weight, which inflates their demand in the objective and pulls sites toward them. The same MCLP is solved on the reweighted demand, and the base and equity selections are compared at the neighborhood (NTA) level.
 
-**Stage 6 — Generalization.** The base pipeline is refactored into a single config-driven notebook that runs on any city given only latitude and longitude demand points. The projected CRS is auto-derived from the data (UTM zone computed from longitude), and the street network is pulled automatically from OpenStreetMap. Validated on Porto, Portugal, run at p = 20, 40, 55, 70, 85, 100. The right station count scales with coverage *area*, not population: Porto municipality is roughly 70% of Manhattan's footprint, and its coverage-curve knee sits accordingly around 70 sites.
+**Stage 6 — Generalization.** The base pipeline is refactored into a single config-driven notebook that runs on any city given only latitude and longitude demand points. The projected CRS is auto-derived from the data (UTM zone computed from longitude), and the street network is pulled automatically from OpenStreetMap. Validated on Porto, Portugal, run at p = 20, 40, 55, 70, 85, 100.
 
 ## Academic foundation
 
@@ -91,7 +106,7 @@ Each reflects the gap between a model and a deployment.
 
 ## Tech stack
 
-Python, GeoPandas, osmnx, NetworkX, pandana (network-distance queries), PuLP with the CBC solver (integer programming), Shapely, the Census API for ACS data, and PostGIS for the road network. ArcGIS Pro was used for cartographic QA only, not as part of the analytical pipeline. Visualization in matplotlib, with an interactive deck.gl dashboard in progress.
+Python, GeoPandas, osmnx, NetworkX, pandana (network-distance queries), PuLP with the CBC solver (integer programming), Shapely, the Census API for ACS data, and PostGIS for the road network. ArcGIS Pro was used for cartographic QA only, not as part of the analytical pipeline. Visualization in matplotlib, with an interactive deck.gl dashboard (linked above) deployed as a static site on GitHub Pages.
 
 ## Repo structure
 
@@ -109,10 +124,16 @@ nyc-av-pudo-index/
 │   ├── 05_equity.ipynb
 │   └── 06_generalize.ipynb   # config-driven, runs on any city
 ├── src/
-├── dashboard/
+│   ├── download_nyc_layers.py
+│   └── export_dashboard_data.py
+├── docs/                      # static dashboard, served via GitHub Pages
+│   ├── index.html
+│   └── data/                  # GeoJSON layers + stats.json
 └── README.md
 ```
 
 ## Reproducing the pipeline
 
 The constraint layers in `data/raw/` are gitignored. To regenerate them, run `python src/download_nyc_layers.py` from the repo root, then run notebooks 01 through 05 in order. To run the pipeline on a different city, open `06_generalize.ipynb`, point the `CONFIG` dict at a file of lat/lon demand points, and run it; the network and projected CRS are derived automatically.
+
+To run the dashboard locally, run `python -m http.server` from the `docs/` folder and open the printed address. It is served live as-is on GitHub Pages from the `docs/` folder.
