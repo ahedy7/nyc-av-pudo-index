@@ -16,6 +16,10 @@
   <title>NYC AV PUDO Index</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://basemaps.cartocdn.com">
+  <link rel="preconnect" href="https://tiles-a.basemaps.cartocdn.com">
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,7 +31,7 @@
       overflow: hidden;
     }
 
-    #deck-canvas {
+    #map {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -265,7 +269,7 @@
 </head>
 <body>
 
-<canvas id="deck-canvas"></canvas>
+<div id="map"></div>
 
 <!-- Control panel -->
 <div id="panel">
@@ -325,7 +329,8 @@
 </div>
 
 <div id="attr">
-  Tiles &copy; <a href="https://www.esri.com/" target="_blank">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors
+  <span id="attr-basemap">&copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a></span>
+  &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
   &nbsp;·&nbsp; deck.gl
 </div>
 
@@ -348,6 +353,7 @@ let state     = { city: 'manhattan', mode: 'base', p: 100 };
 let statsJson = {};
 let cache     = {};
 let deckInst  = null;
+let map       = null;
 
 /* ================================================================
    Color ramp: dark indigo → blue → cyan/teal → amber → gold
@@ -399,41 +405,15 @@ async function fetchGeoJSON(key) {
    Layer builders
    ================================================================ */
 const {
-  Deck,
   GeoJsonLayer,
   ScatterplotLayer,
-  TileLayer,
-  BitmapLayer,
-  FlyToInterpolator,
+  MapboxOverlay,
 } = deck;
 
-const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
-
-function esriTileLayer(id, service) {
-  return new deck.TileLayer({
-    id,
-    data: `${ESRI_TILES}/${service}/MapServer/tile/{z}/{y}/{x}`,
-    minZoom: 0,
-    maxZoom: 16,
-    tileSize: 256,
-    renderSubLayers: props => {
-      const { boundingBox } = props.tile;
-      return new deck.BitmapLayer(props, {
-        data: null,
-        image: props.data,
-        bounds: [boundingBox[0][0], boundingBox[0][1], boundingBox[1][0], boundingBox[1][1]],
-      });
-    },
-  });
-}
-
-// Dark base + labels (deck.gl flattens nested layer arrays)
-function basemapLayer() {
-  return [
-    esriTileLayer('basemap', 'World_Dark_Gray_Base'),
-    esriTileLayer('basemap-labels', 'World_Dark_Gray_Reference'),
-  ];
-}
+// Keyless dark vector basemaps, drawn by MapLibre underneath the deck.gl overlay.
+// CARTO Dark Matter is the primary; OpenFreeMap takes over if CARTO stops serving it.
+const BASEMAP_STYLE    = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const BASEMAP_FALLBACK = 'https://tiles.openfreemap.org/styles/dark';
 
 function networkLayer(gj) {
   return new GeoJsonLayer({
@@ -507,7 +487,7 @@ function buildLayers() {
   const netGJ  = (state.city === 'manhattan') ? (cache['manhattan_network'] || null) : null;
   const siteGJ = cache[currentKey()] || null;
 
-  const layers = [basemapLayer()];
+  const layers = [];
   if (netGJ)  layers.push(networkLayer(netGJ));
   if (siteGJ) {
     layers.push(coverageLayer(siteGJ));
@@ -551,13 +531,8 @@ function loadAndRender() {
    Camera
    ================================================================ */
 function flyTo(city) {
-  deckInst.setProps({
-    initialViewState: {
-      ...CAMERA[city],
-      transitionDuration: 1400,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
-    },
-  });
+  const { longitude, latitude, zoom } = CAMERA[city];
+  map.flyTo({ center: [longitude, latitude], zoom, duration: 1400 });
 }
 
 /* ================================================================
@@ -646,17 +621,25 @@ async function init() {
   slider.max     = MANHATTAN_P.length - 1;
   slider.value   = MANHATTAN_P.indexOf(100);
 
-  // Create deck.gl instance
-  deckInst = new Deck({
-    canvas: 'deck-canvas',
-    width: '100%',
-    height: '100%',
-    initialViewState: { ...CAMERA.manhattan },
-    controller: true,
-    useDevicePixels: true,
-    layers: [basemapLayer()],
-    getTooltip,
+  // Basemap + deck.gl overlay
+  const { longitude, latitude, zoom } = CAMERA.manhattan;
+  map = new maplibregl.Map({
+    container: 'map',
+    style: BASEMAP_STYLE,
+    center: [longitude, latitude],
+    zoom,
+    attributionControl: false,
   });
+  map.on('error', () => {
+    if (map.fellBack) return;
+    map.fellBack = true;
+    map.setStyle(BASEMAP_FALLBACK);
+    document.getElementById('attr-basemap').innerHTML =
+      '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; ' +
+      '<a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a>';
+  });
+  deckInst = new MapboxOverlay({ layers: [], getTooltip });
+  map.addControl(deckInst);
 
   // Load network glow + initial site file in parallel — render after each arrives
   Promise.all([
