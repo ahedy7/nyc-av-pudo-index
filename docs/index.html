@@ -325,7 +325,7 @@
 </div>
 
 <div id="attr">
-  &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>
+  Tiles &copy; <a href="https://www.esri.com/" target="_blank">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors
   &nbsp;·&nbsp; deck.gl
 </div>
 
@@ -407,12 +407,14 @@ const {
   FlyToInterpolator,
 } = deck;
 
-function basemapLayer() {
+const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+
+function esriTileLayer(id, service) {
   return new deck.TileLayer({
-    id: 'carto-basemap',
-    data: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+    id,
+    data: `${ESRI_TILES}/${service}/MapServer/tile/{z}/{y}/{x}`,
     minZoom: 0,
-    maxZoom: 19,
+    maxZoom: 16,
     tileSize: 256,
     renderSubLayers: props => {
       const { boundingBox } = props.tile;
@@ -423,6 +425,14 @@ function basemapLayer() {
       });
     },
   });
+}
+
+// Dark base + labels (deck.gl flattens nested layer arrays)
+function basemapLayer() {
+  return [
+    esriTileLayer('basemap', 'World_Dark_Gray_Base'),
+    esriTileLayer('basemap-labels', 'World_Dark_Gray_Reference'),
+  ];
 }
 
 function networkLayer(gj) {
